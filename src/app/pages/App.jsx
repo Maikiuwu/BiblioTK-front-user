@@ -9,8 +9,11 @@ import {
 
 import { getCurrentSession, logoutUser } from "../../service/LoginService.js";
 
+import Construccion from "./Construccion.jsx";
 import Home from "./Home.jsx";
 import Profile from "./Profile.jsx";
+
+const LOGIN_URL = import.meta.env.VITE_LOGIN_APP_URL ?? "http://localhost:5172";
 
 function getSessionUser(session) {
 	return session?.user ?? session ?? null;
@@ -48,23 +51,30 @@ function ProtectedApp() {
 		};
 	}, []);
 
-	if (status === "loading") return null;
-	if (status !== "ready") return <Navigate to="/" replace />;
+	useEffect(() => {
+		// Sin sesión o con otro rol: esta app no tiene "/" propio, se vuelve a la landing.
+		// El motivo viaja por la URL porque no hay forma de pasar estado de React entre apps.
+		if (status === "unauthenticated") {
+			window.location.assign(`${LOGIN_URL}/login?motivo=sesion_expirada`);
+		} else if (status === "forbidden") {
+			window.location.assign(`${LOGIN_URL}/login?motivo=sin_permiso`);
+		}
+	}, [status]);
 
 	async function handleLogout() {
 		try {
 			await logoutUser();
 		} finally {
-			const loginUrl = import.meta.env.VITE_LOGIN_APP_URL;
-			window.location.assign(loginUrl || "/");
+			window.location.assign(LOGIN_URL);
 		}
 	}
 
 	async function handleAccountDeleted() {
 		await logoutUser().catch(() => undefined);
-		const loginUrl = import.meta.env.VITE_LOGIN_APP_URL;
-		window.location.assign(loginUrl || "/");
+		window.location.assign(`${LOGIN_URL}/login?motivo=cuenta_eliminada`);
 	}
+
+	if (status !== "ready") return null;
 
 	return (
 		<Routes>
@@ -83,11 +93,12 @@ function ProtectedApp() {
 					</PanelLayout>
 				}
 			>
+				<Route path="/HomeUser" element={<Home />} />
 				<Route
-					path="/HomeUser"
-					element={<Home role="usuario" onAccountDeleted={handleAccountDeleted} />}
+					path="/perfil"
+					element={<Profile onAccountDeleted={handleAccountDeleted} />}
 				/>
-				<Route path="/perfil" element={<Profile />} />
+				<Route path="/construccion" element={<Construccion />} />
 			</Route>
 			<Route path="*" element={<Navigate to="/HomeUser" replace />} />
 		</Routes>
