@@ -31,10 +31,13 @@ export function validateUserData(formData) {
 		};
 	}
 
-	if (!/^[1-9]\d*$/.test(formData.cc.trim())) {
+	if (
+		!/^[1-9]\d*$/.test(formData.cc.trim()) ||
+		formData.cc.trim().length > fieldLimits.cc
+	) {
 		return {
 			field: "cc",
-			message: "La cédula debe ser un número entero mayor que 0.",
+			message: `La cédula debe ser un número entero mayor que 0, de hasta ${fieldLimits.cc} dígitos.`,
 		};
 	}
 
@@ -56,6 +59,13 @@ export function validateUserData(formData) {
 		return {
 			field: "nombreUsuario",
 			message: "Ingresa un nombre de usuario.",
+		};
+	}
+
+	if (formData.nombreUsuario.trim().length > fieldLimits.nombreUsuario) {
+		return {
+			field: "nombreUsuario",
+			message: `El nombre de usuario debe tener máximo ${fieldLimits.nombreUsuario} caracteres.`,
 		};
 	}
 

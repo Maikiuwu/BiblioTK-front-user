@@ -1,14 +1,20 @@
-import { ArrowLeft, ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowsClockwise, Trash } from "@phosphor-icons/react";
 import {
 	Alert,
 	Button,
 	buttonClasses,
+	Dialog,
 	formatDate,
+	PasswordField,
 	TextField,
 } from "bibliotk-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { getProfile, updateProfile } from "../../service/ProfileService.js";
+import {
+	deleteAccount,
+	getProfile,
+	updateProfile,
+} from "../../service/ProfileService.js";
 import { createUpdateProfileDto } from "../dto/updateProfile.dto.js";
 import {
 	emailPattern,
@@ -31,7 +37,76 @@ function toFormData(profile) {
 	};
 }
 
-function Profile() {
+function DeleteAccountDialog({ open, onClose, onDeleted }) {
+	const [password, setPassword] = useState("");
+	const [fieldError, setFieldError] = useState("");
+	const [error, setError] = useState("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	function handleClose() {
+		setPassword("");
+		setFieldError("");
+		setError("");
+		onClose();
+	}
+
+	async function handleSubmit(event) {
+		event.preventDefault();
+		setFieldError("");
+		setError("");
+		setIsSubmitting(true);
+
+		try {
+			await deleteAccount(password);
+			await onDeleted();
+		} catch (deleteError) {
+			if (deleteError.field === "contrasena") {
+				setFieldError(deleteError.message);
+			} else {
+				setError(deleteError.message);
+			}
+			setIsSubmitting(false);
+		}
+	}
+
+	return (
+		<Dialog
+			open={open}
+			onClose={handleClose}
+			dismissible={!isSubmitting}
+			tone="danger"
+			icon={<Trash aria-hidden="true" className="size-6" />}
+			title="¿Borrar tu cuenta?"
+			description="Se eliminarán tu cuenta y tus datos personales de BiblioTK. Esta acción no se puede deshacer."
+		>
+			<form onSubmit={handleSubmit} className="grid gap-5">
+				<PasswordField
+					id="confirmar-contrasena"
+					label="Escribe tu contraseña para confirmar"
+					autoComplete="current-password"
+					required
+					value={password}
+					onChange={(event) => {
+						setPassword(event.target.value);
+						setFieldError("");
+					}}
+					error={fieldError || undefined}
+				/>
+				{error && <Alert tone="error">{error}</Alert>}
+				<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+					<Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+						Cancelar
+					</Button>
+					<Button type="submit" variant="danger" loading={isSubmitting}>
+						{isSubmitting ? "Borrando..." : "Borrar cuenta"}
+					</Button>
+				</div>
+			</form>
+		</Dialog>
+	);
+}
+
+function Profile({ onAccountDeleted }) {
 	const [status, setStatus] = useState("loading");
 	const [profile, setProfile] = useState(null);
 	const [formData, setFormData] = useState(() => toFormData(null));
@@ -39,6 +114,7 @@ function Profile() {
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const isMountedRef = useRef(true);
 
 	useEffect(() => {
@@ -138,7 +214,7 @@ function Profile() {
 		<>
 			<header className="motion-safe:animate-rise">
 				<Link
-					to="/inicio"
+					to="/HomeUser"
 					className="group inline-flex items-center gap-2 text-sm font-semibold text-ink-soft transition-colors duration-150 hover:text-pine-900"
 				>
 					<ArrowLeft
@@ -316,7 +392,7 @@ function Profile() {
 
 						<div className="mt-2 flex flex-col-reverse gap-3 sm:col-span-2 sm:flex-row sm:justify-end">
 							<Link
-								to="/inicio"
+								to="/HomeUser"
 								className={buttonClasses({ variant: "outline" })}
 							>
 								Cancelar
@@ -332,6 +408,34 @@ function Profile() {
 					</form>
 				</section>
 			)}
+
+			{status === "ready" && (
+				<section
+					className={`${cardClasses} mt-6 motion-safe:animate-rise [animation-delay:140ms]`}
+				>
+					<h2 className="font-display text-xl font-extrabold tracking-[-0.03em] text-pine-950">
+						Zona de peligro
+					</h2>
+					<p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-soft">
+						Borrar tu cuenta elimina tus datos personales de BiblioTK de forma
+						permanente. Esta acción no se puede deshacer.
+					</p>
+					<Button
+						variant="danger"
+						className="mt-5"
+						onClick={() => setIsDeleteOpen(true)}
+					>
+						<Trash aria-hidden="true" className="size-4" />
+						Borrar mi cuenta
+					</Button>
+				</section>
+			)}
+
+			<DeleteAccountDialog
+				open={isDeleteOpen}
+				onClose={() => setIsDeleteOpen(false)}
+				onDeleted={onAccountDeleted}
+			/>
 		</>
 	);
 }

@@ -10,4 +10,10 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss()
   ],
+  resolve: {
+    dedupe: ["react", "react-dom", "react-router", "react-router-dom", "@phosphor-icons/react"],
+  },
+  server: {
+    port: 5173,
+  },
 })

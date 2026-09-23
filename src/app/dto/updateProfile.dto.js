@@ -3,7 +3,7 @@ export function createUpdateProfileDto(formData) {
 		nombres: formData.nombres.trim(),
 		apellidos: formData.apellidos.trim(),
 		nombreUsuario: formData.nombreUsuario.trim(),
-		email: formData.email.trim(),
+		email: formData.email.trim().toLowerCase(),
 		cc: formData.cc.trim(),
 		celular: formData.celular.trim(),
 	};
