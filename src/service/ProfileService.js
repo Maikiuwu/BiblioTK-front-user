@@ -1,6 +1,6 @@
 const profileUrl =
 	import.meta.env.VITE_PROFILE_URL ??
-	"http://localhost:3003/PerfilBiblioTK/Perfil";
+	"http://localhost:3002/PerfilBiblioTK/Perfil";
 
 async function requestProfile(options, fallbackMessage) {
 	let response;
