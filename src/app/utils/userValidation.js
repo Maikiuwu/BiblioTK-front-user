@@ -1,8 +1,15 @@
+import { z } from "zod";
+
 const letters = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ";
 
-export const namePattern = `[${letters}]+(?:[ '\\-][${letters}]+)*`;
-export const emailPattern = "[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}";
-export const fieldLimits = {
+// El guion va escapado: el atributo pattern del input se compila con el modo /v,
+// que no acepta "-" suelto en una clase (esto sigue igual, es para el HTML pattern)
+const namePattern = `[${letters}]+(?:[ '\\-][${letters}]+)*`;
+
+const nameRegex = new RegExp(`^${namePattern}$`);
+
+// Largo máximo de cada columna de la tabla usuarios
+const fieldLimits = {
 	nombres: 50,
 	apellidos: 50,
 	email: 100,
@@ -11,53 +18,67 @@ export const fieldLimits = {
 	nombreUsuario: 30,
 };
 
-const nameRegex = new RegExp(`^${namePattern}$`);
-const emailRegex = new RegExp(`^${emailPattern}$`);
+const nameSchema = (label) =>
+	z
+		.string()
+		.trim()
+		.regex(
+			nameRegex,
+			`${label} solo pueden contener letras, espacios, apóstrofes o guiones.`,
+		);
 
-export function validateUserData(formData) {
-	if (!nameRegex.test(formData.nombres.trim())) {
-		return {
-			field: "nombres",
-			message:
-				"Los nombres solo pueden contener letras, espacios, apóstrofes o guiones.",
-		};
+// Reglas compartidas por el registro y la edición del perfil
+const userDataSchema = z.object({
+	nombres: nameSchema("Los nombres").max(fieldLimits.nombres),
+	apellidos: nameSchema("Los apellidos").max(fieldLimits.apellidos),
+	cc: z
+		.string()
+		.trim()
+		.regex(/^[1-9]\d*$/, "La cédula debe ser un número entero mayor que 0.")
+		.max(
+			fieldLimits.cc,
+			`La cédula debe tener hasta ${fieldLimits.cc} dígitos.`,
+		),
+	email: z
+		.email("Ingresa un correo válido, por ejemplo: tu@correo.com.")
+		.trim()
+		.max(fieldLimits.email),
+	celular: z
+		.string()
+		.trim()
+		.regex(
+			/^\d{7,15}$/,
+			"El celular debe contener solo números, entre 7 y 15 dígitos.",
+		),
+	nombreUsuario: z
+		.string()
+		.trim()
+		.min(1, "Ingresa un nombre de usuario.")
+		.max(
+			fieldLimits.nombreUsuario,
+			`El nombre de usuario debe tener máximo ${fieldLimits.nombreUsuario} caracteres.`,
+		),
+	contrasena: z
+		.string()
+		.trim()
+		.min(8, "La contraseña debe tener al menos 8 caracteres."),
+});
+
+// Wrapper para no tocar el resto de tu código: mantiene el mismo contrato
+// { field, message } | null que ya usan Register.jsx y el perfil.
+function validateUserData(formData) {
+	const result = userDataSchema.safeParse(formData);
+
+	if (result.success) {
+		return null;
 	}
 
-	if (!nameRegex.test(formData.apellidos.trim())) {
-		return {
-			field: "apellidos",
-			message:
-				"Los apellidos solo pueden contener letras, espacios, apóstrofes o guiones.",
-		};
-	}
+	const firstIssue = result.error.issues[0];
 
-	if (!/^[1-9]\d*$/.test(formData.cc.trim())) {
-		return {
-			field: "cc",
-			message: "La cédula debe ser un número entero mayor que 0.",
-		};
-	}
-
-	if (!emailRegex.test(formData.email.trim())) {
-		return {
-			field: "email",
-			message: "Ingresa un correo válido, por ejemplo: tu@correo.com.",
-		};
-	}
-
-	if (!/^\d{7,15}$/.test(formData.celular.trim())) {
-		return {
-			field: "celular",
-			message: "El celular debe contener solo números, entre 7 y 15 dígitos.",
-		};
-	}
-
-	if (!formData.nombreUsuario.trim()) {
-		return {
-			field: "nombreUsuario",
-			message: "Ingresa un nombre de usuario.",
-		};
-	}
-
-	return null;
+	return {
+		field: firstIssue.path[0],
+		message: firstIssue.message,
+	};
 }
+
+export { validateUserData };

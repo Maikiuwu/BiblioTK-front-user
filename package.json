@@ -15,7 +15,8 @@
     "@tailwindcss/cli": "^4.3.3",
     "bibliotk-ui": "^0.1.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
