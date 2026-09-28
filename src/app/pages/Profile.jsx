@@ -10,12 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getProfile, updateProfile } from "../../service/ProfileService.js";
 import { createUpdateProfileDto } from "../dto/updateProfile.dto.js";
-import {
-	emailPattern,
-	fieldLimits,
-	namePattern,
-	validateUserData,
-} from "../utils/userValidation.js";
+import { validateUserData as validateSharedUserData } from "../utils/userValidation.js";
 
 const cardClasses =
 	"mt-10 max-w-3xl rounded-[28px] bg-sand-50 p-6 shadow-[inset_0_0_0_1px_var(--color-sand-200)] md:p-10";
@@ -92,6 +87,16 @@ function Profile() {
 
 	function errorFor(field) {
 		return fieldError?.field === field ? fieldError.message : undefined;
+	}
+
+	function validateUserData(formData) {
+		const sharedError = validateSharedUserData(formData);
+
+		if (sharedError) {
+			return sharedError;
+		}
+
+		return null;
 	}
 
 	async function handleSubmit(event) {
@@ -222,10 +227,6 @@ function Profile() {
 							name="nombres"
 							label="Nombres"
 							type="text"
-							pattern={namePattern}
-							minLength={2}
-							maxLength={fieldLimits.nombres}
-							title="Solo se permiten letras, espacios, apóstrofes o guiones"
 							autoComplete="given-name"
 							required
 							value={formData.nombres}
@@ -237,10 +238,6 @@ function Profile() {
 							name="apellidos"
 							label="Apellidos"
 							type="text"
-							pattern={namePattern}
-							minLength={2}
-							maxLength={fieldLimits.apellidos}
-							title="Solo se permiten letras, espacios, apóstrofes o guiones"
 							autoComplete="family-name"
 							required
 							value={formData.apellidos}
@@ -252,7 +249,6 @@ function Profile() {
 							name="nombreUsuario"
 							label="Nombre de usuario"
 							type="text"
-							maxLength={fieldLimits.nombreUsuario}
 							autoComplete="username"
 							required
 							value={formData.nombreUsuario}
@@ -264,9 +260,6 @@ function Profile() {
 							name="email"
 							label="Correo electrónico"
 							type="email"
-							pattern={emailPattern}
-							maxLength={fieldLimits.email}
-							title="Usa un correo con dominio, por ejemplo tu@correo.com"
 							autoComplete="email"
 							required
 							value={formData.email}
@@ -279,9 +272,6 @@ function Profile() {
 							label="Cédula de identidad"
 							type="text"
 							inputMode="numeric"
-							pattern="[1-9][0-9]*"
-							maxLength={fieldLimits.cc}
-							title="La cédula debe ser un número entero mayor que 0"
 							autoComplete="off"
 							required
 							value={formData.cc}
@@ -293,9 +283,6 @@ function Profile() {
 							name="celular"
 							label="Celular"
 							type="tel"
-							pattern="[0-9]{7,15}"
-							maxLength={fieldLimits.celular}
-							title="Ingresa entre 7 y 15 dígitos"
 							autoComplete="tel"
 							required
 							value={formData.celular}
