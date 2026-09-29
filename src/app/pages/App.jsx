@@ -9,8 +9,18 @@ import {
 
 import { getCurrentSession, logoutUser } from "../../service/LoginService.js";
 
+import Catalogo from "./Catalogo.jsx";
 import Home from "./Home.jsx";
+import Prestamos from "./Prestamos.jsx";
 import Profile from "./Profile.jsx";
+
+const LOGIN_URL = import.meta.env.VITE_LOGIN_APP_URL ?? "http://localhost:5172";
+
+// VITE_LOGIN_APP_URL puede venir con "/" final o incluso con "/login": la ruta se resuelve
+// sobre su origen para no terminar en "//login" (que la landing no reconoce)
+function landingUrl(ruta) {
+	return new URL(ruta, LOGIN_URL).toString();
+}
 
 function getSessionUser(session) {
 	return session?.user ?? session ?? null;
@@ -48,23 +58,30 @@ function ProtectedApp() {
 		};
 	}, []);
 
-	if (status === "loading") return null;
-	if (status !== "ready") return <Navigate to="/" replace />;
+	useEffect(() => {
+		// Sin sesión o con otro rol: esta app no tiene "/" propio, se vuelve a la landing.
+		// El motivo viaja por la URL porque no hay forma de pasar estado de React entre apps.
+		if (status === "unauthenticated") {
+			window.location.assign(landingUrl("/login?motivo=sesion_expirada"));
+		} else if (status === "forbidden") {
+			window.location.assign(landingUrl("/login?motivo=sin_permiso"));
+		}
+	}, [status]);
 
 	async function handleLogout() {
 		try {
 			await logoutUser();
 		} finally {
-			const loginUrl = import.meta.env.VITE_LOGIN_APP_URL;
-			window.location.assign(loginUrl || "/");
+			window.location.assign(LOGIN_URL);
 		}
 	}
 
 	async function handleAccountDeleted() {
 		await logoutUser().catch(() => undefined);
-		const loginUrl = import.meta.env.VITE_LOGIN_APP_URL;
-		window.location.assign(loginUrl || "/");
+		window.location.assign(landingUrl("/login?motivo=cuenta_eliminada"));
 	}
+
+	if (status !== "ready") return null;
 
 	return (
 		<Routes>
@@ -73,6 +90,8 @@ function ProtectedApp() {
 					<PanelLayout
 						navItems={[
 							{ to: "/HomeUser", label: "Inicio", end: true },
+							{ to: "/catalogo", label: "Catálogo" },
+							{ to: "/prestamos", label: "Préstamos" },
 							{ to: "/perfil", label: "Mi perfil" },
 						]}
 						homePath="/HomeUser"
@@ -83,11 +102,13 @@ function ProtectedApp() {
 					</PanelLayout>
 				}
 			>
+				<Route path="/HomeUser" element={<Home />} />
+				<Route path="/catalogo" element={<Catalogo />} />
+				<Route path="/prestamos" element={<Prestamos />} />
 				<Route
-					path="/HomeUser"
-					element={<Home role="usuario" onAccountDeleted={handleAccountDeleted} />}
+					path="/perfil"
+					element={<Profile onAccountDeleted={handleAccountDeleted} />}
 				/>
-				<Route path="/perfil" element={<Profile />} />
 			</Route>
 			<Route path="*" element={<Navigate to="/HomeUser" replace />} />
 		</Routes>

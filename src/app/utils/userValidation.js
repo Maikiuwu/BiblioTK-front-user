@@ -27,7 +27,8 @@ const nameSchema = (label) =>
 			`${label} solo pueden contener letras, espacios, apóstrofes o guiones.`,
 		);
 
-// Reglas compartidas por el registro y la edición del perfil
+// Reglas de los datos del perfil (las mismas del registro en BiblioTK-front, sin la contraseña:
+// este formulario no la tiene y, si el esquema la exige, "Guardar cambios" nunca pasa la validación)
 const userDataSchema = z.object({
 	nombres: nameSchema("Los nombres").max(fieldLimits.nombres),
 	apellidos: nameSchema("Los apellidos").max(fieldLimits.apellidos),
@@ -58,14 +59,9 @@ const userDataSchema = z.object({
 			fieldLimits.nombreUsuario,
 			`El nombre de usuario debe tener máximo ${fieldLimits.nombreUsuario} caracteres.`,
 		),
-	contrasena: z
-		.string()
-		.trim()
-		.min(8, "La contraseña debe tener al menos 8 caracteres."),
 });
 
-// Wrapper para no tocar el resto de tu código: mantiene el mismo contrato
-// { field, message } | null que ya usan Register.jsx y el perfil.
+// Mantiene el contrato { field, message } | null que usa el perfil
 function validateUserData(formData) {
 	const result = userDataSchema.safeParse(formData);
 

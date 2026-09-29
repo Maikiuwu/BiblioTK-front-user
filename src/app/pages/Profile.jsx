@@ -1,19 +1,27 @@
-import { ArrowLeft, ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowsClockwise, Trash } from "@phosphor-icons/react";
 import {
 	Alert,
 	Button,
 	buttonClasses,
+	Dialog,
 	formatDate,
+	PasswordField,
 	TextField,
 } from "bibliotk-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { getProfile, updateProfile } from "../../service/ProfileService.js";
+import {
+	deleteAccount,
+	getProfile,
+	updateProfile,
+} from "../../service/ProfileService.js";
 import { createUpdateProfileDto } from "../dto/updateProfile.dto.js";
-import { validateUserData as validateSharedUserData } from "../utils/userValidation.js";
+import { validateUserData } from "../utils/userValidation.js";
+
+const HOME_PATH = "/HomeUser";
 
 const cardClasses =
-	"mt-10 max-w-3xl rounded-[28px] bg-sand-50 p-6 shadow-[inset_0_0_0_1px_var(--color-sand-200)] md:p-10";
+	"max-w-3xl rounded-[28px] bg-sand-50 p-6 shadow-[inset_0_0_0_1px_var(--color-sand-200)] md:p-10";
 
 function toFormData(profile) {
 	return {
@@ -26,7 +34,77 @@ function toFormData(profile) {
 	};
 }
 
-function Profile() {
+function DeleteAccountDialog({ open, onClose, onDeleted }) {
+	const [password, setPassword] = useState("");
+	const [fieldError, setFieldError] = useState("");
+	const [error, setError] = useState("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	function handleClose() {
+		setPassword("");
+		setFieldError("");
+		setError("");
+		onClose();
+	}
+
+	async function handleSubmit(event) {
+		event.preventDefault();
+		setFieldError("");
+		setError("");
+		setIsSubmitting(true);
+
+		try {
+			await deleteAccount(password);
+			await onDeleted();
+		} catch (deleteError) {
+			if (deleteError.field === "contrasena") {
+				setFieldError(deleteError.message);
+			} else {
+				setError(deleteError.message);
+			}
+			setIsSubmitting(false);
+		}
+	}
+
+	return (
+		<Dialog
+			open={open}
+			onClose={handleClose}
+			dismissible={!isSubmitting}
+			tone="danger"
+			icon={<Trash aria-hidden="true" className="size-6" />}
+			title="¿Eliminar tu cuenta?"
+			description="Se eliminarán tu cuenta y tus datos personales de BiblioTK. Esta acción no se puede deshacer."
+		>
+			<form onSubmit={handleSubmit} className="grid gap-5">
+				<PasswordField
+					id="confirmar-contrasena"
+					label="Escribe tu contraseña para confirmar"
+					autoComplete="current-password"
+					required
+					value={password}
+					onChange={(event) => {
+						setPassword(event.target.value);
+						setFieldError("");
+					}}
+					error={fieldError || undefined}
+				/>
+				{error && <Alert tone="error">{error}</Alert>}
+				<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+					<Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+						Cancelar
+					</Button>
+					<Button type="submit" variant="danger" loading={isSubmitting}>
+						{isSubmitting ? "Eliminando..." : "Eliminar cuenta"}
+					</Button>
+				</div>
+			</form>
+		</Dialog>
+	);
+}
+
+// /perfil: aquí adentro están las dos opciones del botón "Editar perfil" del inicio
+function Profile({ onAccountDeleted }) {
 	const [status, setStatus] = useState("loading");
 	const [profile, setProfile] = useState(null);
 	const [formData, setFormData] = useState(() => toFormData(null));
@@ -34,6 +112,7 @@ function Profile() {
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const isMountedRef = useRef(true);
 
 	useEffect(() => {
@@ -43,10 +122,8 @@ function Profile() {
 		};
 	}, []);
 
+	// Solo actualiza el estado al responder: el "cargando" inicial ya viene del useState
 	const loadProfile = useCallback(() => {
-		setStatus("loading");
-		setError("");
-
 		getProfile()
 			.then((data) => {
 				if (!isMountedRef.current) return;
@@ -64,6 +141,12 @@ function Profile() {
 	useEffect(() => {
 		loadProfile();
 	}, [loadProfile]);
+
+	function retryLoad() {
+		setStatus("loading");
+		setError("");
+		loadProfile();
+	}
 
 	const savedFormData = toFormData(profile);
 	const hasChanges = Object.keys(formData).some(
@@ -87,16 +170,6 @@ function Profile() {
 
 	function errorFor(field) {
 		return fieldError?.field === field ? fieldError.message : undefined;
-	}
-
-	function validateUserData(formData) {
-		const sharedError = validateSharedUserData(formData);
-
-		if (sharedError) {
-			return sharedError;
-		}
-
-		return null;
 	}
 
 	async function handleSubmit(event) {
@@ -143,7 +216,7 @@ function Profile() {
 		<>
 			<header className="motion-safe:animate-rise">
 				<Link
-					to="/inicio"
+					to={HOME_PATH}
 					className="group inline-flex items-center gap-2 text-sm font-semibold text-ink-soft transition-colors duration-150 hover:text-pine-900"
 				>
 					<ArrowLeft
@@ -156,12 +229,12 @@ function Profile() {
 					Mi perfil
 				</h1>
 				<p className="mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
-					Revisa y actualiza tus datos personales.
+					Edita tus datos personales o elimina tu cuenta.
 				</p>
 			</header>
 
 			{status === "loading" && (
-				<div aria-busy="true" className={cardClasses}>
+				<div aria-busy="true" className={`${cardClasses} mt-10`}>
 					<div className="flex items-center gap-4">
 						<span className="block size-14 animate-pulse rounded-2xl bg-sand-200" />
 						<div className="grid gap-2">
@@ -182,9 +255,9 @@ function Profile() {
 			)}
 
 			{status === "error" && (
-				<div className={cardClasses}>
+				<div className={`${cardClasses} mt-10`}>
 					<Alert tone="error">{error}</Alert>
-					<Button className="mt-6" onClick={loadProfile}>
+					<Button className="mt-6" onClick={retryLoad}>
 						<ArrowsClockwise aria-hidden="true" className="size-[18px]" />
 						Reintentar
 					</Button>
@@ -192,132 +265,166 @@ function Profile() {
 			)}
 
 			{status === "ready" && (
-				<section
-					aria-labelledby="perfil-nombre"
-					className={`${cardClasses} motion-safe:animate-rise [animation-delay:80ms]`}
-				>
-					<div className="flex items-center gap-4">
-						<span
-							aria-hidden="true"
-							className="grid size-14 shrink-0 place-items-center rounded-2xl bg-pine-900 font-display text-lg font-extrabold tracking-[-0.02em] text-honey-300"
-						>
-							{initials}
-						</span>
-						<div className="min-w-0">
-							<h2
-								id="perfil-nombre"
-								className="truncate font-display text-2xl font-extrabold tracking-[-0.035em] text-pine-950"
-							>
-								{profile.nombres} {profile.apellidos}
-							</h2>
-							{memberSince && (
-								<p className="mt-1 text-sm text-ink-soft">
-									Miembro desde el {memberSince}
-								</p>
-							)}
-						</div>
-					</div>
-
-					<form
-						onSubmit={handleSubmit}
-						className="mt-8 grid gap-5 sm:grid-cols-2"
+				<>
+					<section
+						aria-labelledby="perfil-editar"
+						className={`${cardClasses} mt-10 motion-safe:animate-rise [animation-delay:80ms]`}
 					>
-						<TextField
-							id="nombres"
-							name="nombres"
-							label="Nombres"
-							type="text"
-							autoComplete="given-name"
-							required
-							value={formData.nombres}
-							onChange={handleChange}
-							error={errorFor("nombres")}
-						/>
-						<TextField
-							id="apellidos"
-							name="apellidos"
-							label="Apellidos"
-							type="text"
-							autoComplete="family-name"
-							required
-							value={formData.apellidos}
-							onChange={handleChange}
-							error={errorFor("apellidos")}
-						/>
-						<TextField
-							id="nombreUsuario"
-							name="nombreUsuario"
-							label="Nombre de usuario"
-							type="text"
-							autoComplete="username"
-							required
-							value={formData.nombreUsuario}
-							onChange={handleChange}
-							error={errorFor("nombreUsuario")}
-						/>
-						<TextField
-							id="email"
-							name="email"
-							label="Correo electrónico"
-							type="email"
-							autoComplete="email"
-							required
-							value={formData.email}
-							onChange={handleChange}
-							error={errorFor("email")}
-						/>
-						<TextField
-							id="cc"
-							name="cc"
-							label="Cédula de identidad"
-							type="text"
-							inputMode="numeric"
-							autoComplete="off"
-							required
-							value={formData.cc}
-							onChange={handleChange}
-							error={errorFor("cc")}
-						/>
-						<TextField
-							id="celular"
-							name="celular"
-							label="Celular"
-							type="tel"
-							autoComplete="tel"
-							required
-							value={formData.celular}
-							onChange={handleChange}
-							error={errorFor("celular")}
-						/>
-
-						{error && (
-							<Alert tone="error" className="sm:col-span-2">
-								{error}
-							</Alert>
-						)}
-						{success && (
-							<Alert tone="success" className="sm:col-span-2">
-								{success}
-							</Alert>
-						)}
-
-						<div className="mt-2 flex flex-col-reverse gap-3 sm:col-span-2 sm:flex-row sm:justify-end">
-							<Link
-								to="/inicio"
-								className={buttonClasses({ variant: "outline" })}
+						<div className="flex items-center gap-4">
+							<span
+								aria-hidden="true"
+								className="grid size-14 shrink-0 place-items-center rounded-2xl bg-pine-900 font-display text-lg font-extrabold tracking-[-0.02em] text-honey-300"
 							>
-								Cancelar
-							</Link>
-							<Button
-								type="submit"
-								loading={isSubmitting}
-								disabled={!hasChanges}
-							>
-								{isSubmitting ? "Guardando..." : "Guardar cambios"}
-							</Button>
+								{initials}
+							</span>
+							<div className="min-w-0">
+								<p className="truncate font-display text-2xl font-extrabold tracking-[-0.035em] text-pine-950">
+									{profile.nombres} {profile.apellidos}
+								</p>
+								{memberSince && (
+									<p className="mt-1 text-sm text-ink-soft">
+										Miembro desde el {memberSince}
+									</p>
+								)}
+							</div>
 						</div>
-					</form>
-				</section>
+
+						<h2
+							id="perfil-editar"
+							className="mt-8 font-display text-xl font-extrabold tracking-[-0.03em] text-pine-950"
+						>
+							Editar mis datos
+						</h2>
+
+						<form
+							onSubmit={handleSubmit}
+							className="mt-5 grid gap-5 sm:grid-cols-2"
+						>
+							<TextField
+								id="nombres"
+								name="nombres"
+								label="Nombres"
+								type="text"
+								autoComplete="given-name"
+								required
+								value={formData.nombres}
+								onChange={handleChange}
+								error={errorFor("nombres")}
+							/>
+							<TextField
+								id="apellidos"
+								name="apellidos"
+								label="Apellidos"
+								type="text"
+								autoComplete="family-name"
+								required
+								value={formData.apellidos}
+								onChange={handleChange}
+								error={errorFor("apellidos")}
+							/>
+							<TextField
+								id="nombreUsuario"
+								name="nombreUsuario"
+								label="Nombre de usuario"
+								type="text"
+								autoComplete="username"
+								required
+								value={formData.nombreUsuario}
+								onChange={handleChange}
+								error={errorFor("nombreUsuario")}
+							/>
+							<TextField
+								id="email"
+								name="email"
+								label="Correo electrónico"
+								type="email"
+								autoComplete="email"
+								required
+								value={formData.email}
+								onChange={handleChange}
+								error={errorFor("email")}
+							/>
+							<TextField
+								id="cc"
+								name="cc"
+								label="Cédula de identidad"
+								type="text"
+								inputMode="numeric"
+								autoComplete="off"
+								required
+								value={formData.cc}
+								onChange={handleChange}
+								error={errorFor("cc")}
+							/>
+							<TextField
+								id="celular"
+								name="celular"
+								label="Celular"
+								type="tel"
+								autoComplete="tel"
+								required
+								value={formData.celular}
+								onChange={handleChange}
+								error={errorFor("celular")}
+							/>
+
+							{error && (
+								<Alert tone="error" className="sm:col-span-2">
+									{error}
+								</Alert>
+							)}
+							{success && (
+								<Alert tone="success" className="sm:col-span-2">
+									{success}
+								</Alert>
+							)}
+
+							<div className="mt-2 flex flex-col-reverse gap-3 sm:col-span-2 sm:flex-row sm:justify-end">
+								<Link to={HOME_PATH} className={buttonClasses({ variant: "outline" })}>
+									Cancelar
+								</Link>
+								<Button
+									type="submit"
+									loading={isSubmitting}
+									disabled={!hasChanges}
+								>
+									{isSubmitting ? "Guardando..." : "Guardar cambios"}
+								</Button>
+							</div>
+						</form>
+					</section>
+
+					<section
+						aria-labelledby="perfil-eliminar"
+						className={`${cardClasses} mt-3 motion-safe:animate-rise [animation-delay:140ms]`}
+					>
+						<h2
+							id="perfil-eliminar"
+							className="font-display text-xl font-extrabold tracking-[-0.03em] text-pine-950"
+						>
+							Eliminar mi cuenta
+						</h2>
+						<p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-soft">
+							Borra tu cuenta y tus datos personales de BiblioTK de forma
+							permanente. Si tienes préstamos sin devolver, primero debes
+							devolverlos.
+						</p>
+						<Button
+							variant="danger"
+							className="mt-5"
+							onClick={() => setIsDeleteOpen(true)}
+						>
+							<Trash aria-hidden="true" className="size-4" />
+							Eliminar mi cuenta
+						</Button>
+					</section>
+
+					<DeleteAccountDialog
+						open={isDeleteOpen}
+						onClose={() => setIsDeleteOpen(false)}
+						onDeleted={onAccountDeleted}
+					/>
+				</>
 			)}
 		</>
 	);
