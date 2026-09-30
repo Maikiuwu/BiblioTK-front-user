@@ -1,10 +1,16 @@
+import { ArrowsClockwise } from "@phosphor-icons/react/ArrowsClockwise";
+import { ArrowsLeftRight } from "@phosphor-icons/react/ArrowsLeftRight";
+import { MapPin } from "@phosphor-icons/react/MapPin";
+import { XCircle } from "@phosphor-icons/react/XCircle";
 import {
-	ArrowsClockwise,
-	ArrowsLeftRight,
-	MapPin,
-	XCircle,
-} from "@phosphor-icons/react";
-import { Alert, Button, buttonClasses, cn, Dialog, formatDate } from "bibliotk-ui";
+	Alert,
+	Button,
+	buttonClasses,
+	cn,
+	CoverImage,
+	Dialog,
+	formatDate,
+} from "bibliotk-ui";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listMateriales } from "../../service/MaterialesService.js";
@@ -12,7 +18,6 @@ import {
 	cancelMiPrestamo,
 	listMisPrestamos,
 } from "../../service/PrestamosService.js";
-import CoverImage from "../components/CoverImage.jsx";
 
 const cardClasses =
 	"rounded-[28px] bg-sand-50 shadow-[inset_0_0_0_1px_var(--color-sand-200)]";

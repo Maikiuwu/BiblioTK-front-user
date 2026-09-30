@@ -1,16 +1,15 @@
-import {
-	ArrowsClockwise,
-	Books,
-	CalendarCheck,
-	CheckCircle,
-	MapPin,
-} from "@phosphor-icons/react";
+import { ArrowsClockwise } from "@phosphor-icons/react/ArrowsClockwise";
+import { Books } from "@phosphor-icons/react/Books";
+import { CalendarCheck } from "@phosphor-icons/react/CalendarCheck";
+import { CheckCircle } from "@phosphor-icons/react/CheckCircle";
+import { MapPin } from "@phosphor-icons/react/MapPin";
 import {
 	Alert,
 	Button,
 	buttonClasses,
 	Checkbox,
 	cn,
+	CoverImage,
 	Dialog,
 	formatDate,
 	TextField,
@@ -19,7 +18,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listMateriales } from "../../service/MaterialesService.js";
 import { createPrestamo } from "../../service/PrestamosService.js";
-import CoverImage from "../components/CoverImage.jsx";
 
 const cardClasses =
 	"rounded-[28px] bg-sand-50 shadow-[inset_0_0_0_1px_var(--color-sand-200)]";

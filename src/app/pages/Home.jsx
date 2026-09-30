@@ -1,12 +1,10 @@
-import {
-	ArrowsLeftRight,
-	ArrowUpRight,
-	Books,
-	ChartLineUp,
-	Clock,
-	PencilSimple,
-	UserCircle,
-} from "@phosphor-icons/react";
+import { ArrowsLeftRight } from "@phosphor-icons/react/ArrowsLeftRight";
+import { ArrowUpRight } from "@phosphor-icons/react/ArrowUpRight";
+import { Books } from "@phosphor-icons/react/Books";
+import { ChartLineUp } from "@phosphor-icons/react/ChartLineUp";
+import { Clock } from "@phosphor-icons/react/Clock";
+import { PencilSimple } from "@phosphor-icons/react/PencilSimple";
+import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { buttonClasses, cn, formatNumber, formatToday } from "bibliotk-ui";
 import { useEffect, useId, useState } from "react";
 import { Link } from "react-router-dom";

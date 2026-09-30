@@ -3,7 +3,10 @@
 Parte del sistema BiblioTK (ver `../CLAUDE.md`). Inicio, catálogo con préstamos, "Mis préstamos" y perfil para el rol `usuario`. React 19 + React Router 7 + Vite 8 + Tailwind CSS 4 + Zod (validación del perfil).
 
 - **Arranque:** `npm run dev` → http://localhost:5173 (`VITE_PORT` en `.env.local`; `vite.config.js` lo lee con `loadEnv`)
-- **Librería de interfaz:** `bibliotk-ui` **de npm** (`^0.1.0`, publicada desde el repo `UiBiblioTK`). Esa versión no trae `Select`, `Footer` ni `ErrorBoundary`: usar solo lo que exporta npm. Lo que falte vive en `src/app/components/` hasta que se publique en la librería.
+- **Librería de interfaz:** `bibliotk-ui` **de npm** (`^0.2.0`, publicada desde el repo `UiBiblioTK`), con JS y CSS ya compilados. `CoverImage` viene de ahí. Usar solo lo que exporta npm.
+- **CSS:** `src/app/styles/globals.css`, enlazado con `<link>` en `index.html` (no se importa desde `main.jsx`): fuentes + `bibliotk-ui/styles.css` + solo `theme` y `utilities` de Tailwind. Ver `../UiBiblioTK/CLAUDE.md`.
+- **Íconos:** un import por ícono (`@phosphor-icons/react/Books`); ESLint prohíbe el paquete entero. `IconContext` sale de `@phosphor-icons/react/dist/lib/context`.
+- **Carga:** `Home` va en el paquete inicial; Catálogo, Préstamos y Perfil (con Zod) se cargan con `React.lazy` y se precargan cuando el navegador queda libre. La sesión se pide al cargar `App.jsx`.
 - **Acceso:** solo rol `usuario`. `App.jsx` consulta `GET /Sesion`; sin sesión o con otro rol redirige a la landing con `?motivo=sesion_expirada|sin_permiso`; al borrar la cuenta, `?motivo=cuenta_eliminada`. La URL se arma con `new URL(ruta, VITE_LOGIN_APP_URL)` porque esa variable puede venir con `/` final.
 
 ## Estructura
@@ -12,15 +15,14 @@ Parte del sistema BiblioTK (ver `../CLAUDE.md`). Inicio, catálogo con préstamo
 src/
   app/
     pages/
-      App.jsx        # Rutas, guarda de rol, PanelLayout (Inicio, Catálogo, Préstamos, Mi perfil)
+      App.jsx        # Rutas (secciones con React.lazy), guarda de rol, PanelLayout (Inicio, Catálogo, Préstamos, Mi perfil)
       Home.jsx        # /HomeUser — Libros (→ catálogo), Mi perfil (un solo botón), Préstamos, Reportes (próximamente)
       Catalogo.jsx    # /catalogo — portadas, búsqueda, filtros y "Pedir préstamo"
       Prestamos.jsx   # /prestamos — Mis préstamos: en curso e historial
       Profile.jsx     # /perfil — "Editar mis datos" + "Eliminar mi cuenta"
-    components/CoverImage.jsx  # Portada con respaldo (ver abajo). Copia igual en front-admin y front
     dto/updateProfile.dto.js
     utils/userValidation.js    # Esquema Zod del perfil (sin contraseña)
-    styles/globals.css         # Tema + ajustes de la cabecera de PanelLayout (ancho completo, barra deslizable)
+    styles/globals.css         # Hoja única (se enlaza desde index.html) + barra de PanelLayout pegada arriba (.btk-panel__header)
   service/
     LoginService.js       # getCurrentSession, logoutUser → :3001
     ProfileService.js     # getProfile, updateProfile, deleteAccount → :3002 (PerfilBiblioTK)
@@ -39,13 +41,11 @@ Variables opcionales (`.env.local`): `VITE_PORT`, `VITE_LOGIN_APP_URL`, `VITE_SE
 
 El inicio tiene **un solo botón, "Editar perfil"**; dentro de `/perfil` están las dos opciones: el formulario "Editar mis datos" y la sección "Eliminar mi cuenta" (pide la contraseña; el backend bloquea si hay préstamos sin devolver).
 
-## Portadas (`CoverImage.jsx`)
+## Portadas (`CoverImage` de `bibliotk-ui`)
 
 Cada material puede traer `imagenUrl` (Cloudinary u otra URL) e `imagenLocal` (archivo servido por MaterialesBiblioTK). Se intenta primero la remota —si es una subida propia a Cloudinary se pide optimizada con `f_auto,q_auto`— y, si falla, la local; sin ninguna, una portada de color con el título.
 
 ## Pendientes conocidos
 
-- `CoverImage` y los ajustes de la cabecera deberían pasar a `UiBiblioTK` y publicarse en npm; mientras tanto hay copias en cada front.
-- `@phosphor-icons/react` y `react-router-dom` se usan directo pero llegan como dependencias de `bibliotk-ui`: conviene declararlas en `package.json`.
 - La cabecera muestra el correo del JWT: tras cambiarlo en `/perfil` sigue mostrando el anterior hasta volver a iniciar sesión.
 - `README.md` sigue siendo la plantilla por defecto de Vite.

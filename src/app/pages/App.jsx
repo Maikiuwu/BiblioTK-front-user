@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { PanelLayout } from "bibliotk-ui";
 import {
 	Navigate,
@@ -9,10 +9,28 @@ import {
 
 import { getCurrentSession, logoutUser } from "../../service/LoginService.js";
 
-import Catalogo from "./Catalogo.jsx";
 import Home from "./Home.jsx";
-import Prestamos from "./Prestamos.jsx";
-import Profile from "./Profile.jsx";
+
+// El inicio llega en el paquete inicial; las demás secciones (y Zod, que usa el perfil) se descargan aparte
+const cargarCatalogo = () => import("./Catalogo.jsx");
+const cargarPrestamos = () => import("./Prestamos.jsx");
+const cargarProfile = () => import("./Profile.jsx");
+
+const Catalogo = lazy(cargarCatalogo);
+const Prestamos = lazy(cargarPrestamos);
+const Profile = lazy(cargarProfile);
+
+function precargarSecciones() {
+	cargarCatalogo();
+	cargarPrestamos();
+	cargarProfile();
+}
+
+// La sesión se pide apenas carga el módulo, sin esperar al primer render
+const sesionInicial = getCurrentSession().then(
+	(session) => ({ session }),
+	(error) => ({ error }),
+);
 
 const LOGIN_URL = import.meta.env.VITE_LOGIN_APP_URL ?? "http://localhost:5172";
 
@@ -40,18 +58,20 @@ function ProtectedApp() {
 	useEffect(() => {
 		let isActive = true;
 
-		getCurrentSession()
-			.then((session) => {
-				if (!isActive) return;
-				const currentUser = getSessionUser(session);
-				setUser(currentUser);
-				setStatus(
-					getSessionRole(currentUser) === "usuario" ? "ready" : "forbidden",
-				);
-			})
-			.catch(() => {
-				if (isActive) setStatus("unauthenticated");
-			});
+		sesionInicial.then(({ session, error }) => {
+			if (!isActive) return;
+
+			if (error) {
+				setStatus("unauthenticated");
+				return;
+			}
+
+			const currentUser = getSessionUser(session);
+			setUser(currentUser);
+			setStatus(
+				getSessionRole(currentUser) === "usuario" ? "ready" : "forbidden",
+			);
+		});
 
 		return () => {
 			isActive = false;
@@ -65,6 +85,13 @@ function ProtectedApp() {
 			window.location.assign(landingUrl("/login?motivo=sesion_expirada"));
 		} else if (status === "forbidden") {
 			window.location.assign(landingUrl("/login?motivo=sin_permiso"));
+		} else if (status === "ready") {
+			// Con el panel en pantalla, las demás secciones se bajan cuando el navegador queda libre
+			if ("requestIdleCallback" in window) {
+				requestIdleCallback(precargarSecciones);
+			} else {
+				setTimeout(precargarSecciones, 200);
+			}
 		}
 	}, [status]);
 
@@ -98,7 +125,9 @@ function ProtectedApp() {
 						userLabel={user?.email ?? user?.correo}
 						onLogout={handleLogout}
 					>
-						<Outlet />
+						<Suspense fallback={null}>
+							<Outlet />
+						</Suspense>
 					</PanelLayout>
 				}
 			>
