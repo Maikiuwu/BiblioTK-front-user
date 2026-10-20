@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
+    // Detrás del gateway la app vive en una subruta (VITE_BASE=/lector/); en desarrollo, en la raíz
+    base: env.VITE_BASE || '/',
     plugins: [
       react(),
       babel({ presets: [reactCompilerPreset()] }),
