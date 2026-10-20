@@ -4,8 +4,10 @@ const logoutUrl =
 	import.meta.env.VITE_LOGOUT_URL ?? "http://localhost:3001/BiblioTK/Logout";
 
 export async function getCurrentSession() {
+	// Sin caché: al volver con "atrás", el navegador devolvía la respuesta de una sesión ya cerrada
 	const response = await fetch(sessionUrl, {
 		credentials: "include",
+		cache: "no-store",
 	});
 
 	if (!response.ok) {
@@ -13,6 +15,15 @@ export async function getCurrentSession() {
 	}
 
 	return await response.json();
+}
+
+// La sesión no trae el rol: el servidor dice a qué app va la cuenta (destino) y basta con comparar orígenes
+export function esSesionDeEstaApp(session) {
+	try {
+		return new URL(session?.destino).origin === window.location.origin;
+	} catch {
+		return false;
+	}
 }
 
 export async function logoutUser() {

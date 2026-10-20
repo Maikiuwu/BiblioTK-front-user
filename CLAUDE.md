@@ -7,7 +7,7 @@ Parte del sistema BiblioTK (ver `../CLAUDE.md`). Inicio, catálogo con préstamo
 - **CSS:** `src/app/styles/globals.css`, enlazado con `<link>` en `index.html` (no se importa desde `main.jsx`): fuentes + `bibliotk-ui/styles.css` + solo `theme` y `utilities` de Tailwind. Ver `../UiBiblioTK/CLAUDE.md`.
 - **Íconos:** un import por ícono (`@phosphor-icons/react/Books`); ESLint prohíbe el paquete entero. `IconContext` sale de `@phosphor-icons/react/dist/lib/context`.
 - **Carga:** `Home` va en el paquete inicial; Catálogo, Préstamos y Perfil (con Zod) se cargan con `React.lazy` y se precargan cuando el navegador queda libre. La sesión se pide al cargar `App.jsx`.
-- **Acceso:** solo rol `usuario`. `App.jsx` consulta `GET /Sesion`; sin sesión o con otro rol redirige a la landing con `?motivo=sesion_expirada|sin_permiso`; al borrar la cuenta, `?motivo=cuenta_eliminada`. La URL se arma con `new URL(ruta, VITE_LOGIN_APP_URL)` porque esa variable puede venir con `/` final.
+- **Acceso:** solo cuentas de lector, pero el front nunca ve el rol: `App.jsx` consulta `GET /Sesion` (sin caché) y `esSesionDeEstaApp` (`LoginService.js`) compara el origen del `destino` que devuelve con el de esta app. Sin sesión o con una cuenta de otra app se reemplaza (`location.replace`) por la landing con `?motivo=sesion_expirada|sin_permiso`; al cerrar sesión o borrar la cuenta (`?motivo=cuenta_eliminada`) también se usa `replace`, para que "atrás" no vuelva al panel. La sesión se vuelve a consultar cada vez que la página vuelve a mostrarse (restaurada del bfcache con "atrás", o al volver a la pestaña) y al salir la página se oculta, así no se alcanza a ver si la sesión ya no existe. La URL se arma con `new URL(ruta, VITE_LOGIN_APP_URL)` porque esa variable puede venir con `/` final.
 
 ## Estructura
 
@@ -15,7 +15,7 @@ Parte del sistema BiblioTK (ver `../CLAUDE.md`). Inicio, catálogo con préstamo
 src/
   app/
     pages/
-      App.jsx        # Rutas (secciones con React.lazy), guarda de rol, PanelLayout (Inicio, Catálogo, Préstamos, Mi perfil)
+      App.jsx        # Rutas (secciones con React.lazy), guarda de sesión, PanelLayout (Inicio, Catálogo, Préstamos, Mi perfil)
       Home.jsx        # /HomeUser — Libros (→ catálogo), Mi perfil (un solo botón), Préstamos, Reportes (próximamente)
       Catalogo.jsx    # /catalogo — portadas, búsqueda, filtros y "Pedir préstamo"
       Prestamos.jsx   # /prestamos — Mis préstamos: en curso e historial
@@ -24,7 +24,7 @@ src/
     utils/userValidation.js    # Esquema Zod del perfil (sin contraseña)
     styles/globals.css         # Hoja única (se enlaza desde index.html) + barra de PanelLayout pegada arriba (.btk-panel__header)
   service/
-    LoginService.js       # getCurrentSession, logoutUser → :3001
+    LoginService.js       # getCurrentSession, esSesionDeEstaApp, logoutUser → :3001
     ProfileService.js     # getProfile, updateProfile, deleteAccount → :3002 (PerfilBiblioTK)
     MaterialesService.js  # listMateriales → :3003 (MaterialesBiblioTK, lectura pública)
     PrestamosService.js   # createPrestamo, listMisPrestamos → :3005 (PrestamosBiblioTK)
@@ -47,5 +47,5 @@ Cada material puede traer `imagenUrl` (Cloudinary u otra URL) e `imagenLocal` (a
 
 ## Pendientes conocidos
 
-- La cabecera muestra el correo del JWT: tras cambiarlo en `/perfil` sigue mostrando el anterior hasta volver a iniciar sesión.
+- La cabecera muestra el correo que devolvió `/Sesion` al cargar: tras cambiarlo en `/perfil` sigue mostrando el anterior hasta recargar la página.
 - `README.md` sigue siendo la plantilla por defecto de Vite.
