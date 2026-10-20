@@ -4,7 +4,7 @@ Parte del sistema BiblioTK (ver `../CLAUDE.md`). Inicio, catálogo con préstamo
 
 - **Arranque:** `npm run dev` → http://localhost:5173 (`VITE_PORT` en `.env.local`; `vite.config.js` lo lee con `loadEnv`)
 - **Docker:** `Dockerfile` en dos etapas (compila con Vite → nginx sin root con `nginx.conf`). Las `VITE_*` quedan fijas al compilar: por defecto, detrás del gateway de `../InfraBiblioTK` (rutas relativas, un solo origen) y con la subruta `/lector/`. `VITE_BASE` es esa subruta (`base` de Vite y `basename` del router; en desarrollo, `/`).
-- **Librería de interfaz:** `bibliotk-ui` **de npm** (`^0.3.0`, publicada desde el repo `UiBiblioTK`), con JS y CSS ya compilados. `CoverImage` viene de ahí. Usar solo lo que exporta npm.
+- **Librería de interfaz:** `bibliotk-ui` **de npm** (`^0.4.0`, publicada desde el repo `UiBiblioTK`), con JS y CSS ya compilados. `CoverImage` viene de ahí. Usar solo lo que exporta npm.
 - **CSS:** `src/app/styles/globals.css`, enlazado con `<link>` en `index.html` (no se importa desde `main.jsx`): fuentes + `bibliotk-ui/styles.css` + solo `theme` y `utilities` de Tailwind. Ver `../UiBiblioTK/CLAUDE.md`.
 - **Íconos:** un import por ícono (`@phosphor-icons/react/Books`); ESLint prohíbe el paquete entero. `IconContext` sale de `@phosphor-icons/react/dist/lib/context`.
 - **Carga:** `Home` va en el paquete inicial; Catálogo, Préstamos y Perfil (con Zod) se cargan con `React.lazy` y se precargan cuando el navegador queda libre. La sesión se pide al cargar `App.jsx`.
@@ -52,7 +52,7 @@ Cada material puede traer `imagenUrl` (Cloudinary u otra URL) e `imagenLocal` (a
 - `src/service/NotificacionesService.js` abre el socket de `NotificacionesBiblioTK` (`/NotificacionesBiblioTK/socket.io`, solo WebSocket) con la cookie de sesión: el servidor decide qué recibe la cuenta, el front no conoce el rol. `VITE_NOTIFICACIONES_URL` (por defecto `http://localhost:3006`; vacía = mismo origen, detrás del gateway).
 - `src/app/hooks/useNotificaciones.js` guarda el historial (20, el que manda el servidor al conectar), los avisos emergentes (máximo 3) y las no leídas (marca "leídas hasta" en `localStorage`, por navegador). Se conecta cuando la sesión ya se validó; si el servidor corta el socket (sesión cerrada en otra pestaña, cuenta borrada), revalida la sesión y vuelve a la landing.
 - `App.jsx` pinta `NotificationCenter`: botón flotante abajo a la derecha con contador, panel con el historial y avisos arriba a la derecha.
-- ⚠️ `src/app/components/NotificationCenter.jsx` y su `.css` son una **copia** de `bibliotk-ui` 0.4.0, que todavía no está publicada. Al publicarla: `npm install bibliotk-ui@^0.4.0`, importar `NotificationCenter` desde `"bibliotk-ui"` en `App.jsx`, borrar la copia y quitar su `@import` de `globals.css`.
+- `NotificationCenter` (y su CSS, dentro de `bibliotk-ui/styles.css`) viene de `bibliotk-ui` ^0.4.0.
 
 ## Pendientes conocidos
 
