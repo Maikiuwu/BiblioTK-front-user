@@ -13,6 +13,9 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "bibliotk-ui/theme.css";
 
+/* Copia del centro de notificaciones de bibliotk-ui 0.4.0 (sin publicar) */
+@import "../components/NotificationCenter.css";
+
 /* En esta app la barra de PanelLayout va pegada arriba: sin el margen ni el degradado de la cabecera */
 .btk-panel__header {
 	padding: 0;

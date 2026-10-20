@@ -25,12 +25,13 @@ src/
     styles/globals.css         # Hoja única (se enlaza desde index.html) + barra de PanelLayout pegada arriba (.btk-panel__header)
   service/
     LoginService.js       # getCurrentSession, esSesionDeEstaApp, logoutUser → :3001
+    NotificacionesService.js # conectarNotificaciones → :3006 (Socket.IO)
     ProfileService.js     # getProfile, updateProfile, deleteAccount → :3002 (PerfilBiblioTK)
     MaterialesService.js  # listMateriales → :3003 (MaterialesBiblioTK, lectura pública)
     PrestamosService.js   # createPrestamo, listMisPrestamos → :3005 (PrestamosBiblioTK)
 ```
 
-Variables opcionales (`.env.local`): `VITE_PORT`, `VITE_LOGIN_APP_URL`, `VITE_SESSION_URL`, `VITE_LOGOUT_URL`, `VITE_PROFILE_URL`, `VITE_MATERIALES_URL`, `VITE_PRESTAMOS_URL`. Sin ellas se usan los valores por defecto de cada servicio.
+Variables opcionales (`.env.local`): `VITE_PORT`, `VITE_NOTIFICACIONES_URL`, `VITE_LOGIN_APP_URL`, `VITE_SESSION_URL`, `VITE_LOGOUT_URL`, `VITE_PROFILE_URL`, `VITE_MATERIALES_URL`, `VITE_PRESTAMOS_URL`. Sin ellas se usan los valores por defecto de cada servicio.
 
 ## Préstamos
 
@@ -44,6 +45,13 @@ El inicio tiene **un solo botón, "Editar perfil"**; dentro de `/perfil` están 
 ## Portadas (`CoverImage` de `bibliotk-ui`)
 
 Cada material puede traer `imagenUrl` (Cloudinary u otra URL) e `imagenLocal` (archivo servido por MaterialesBiblioTK). Se intenta primero la remota —si es una subida propia a Cloudinary se pide optimizada con `f_auto,q_auto`— y, si falla, la local; sin ninguna, una portada de color con el título.
+
+## Notificaciones en tiempo real
+
+- `src/service/NotificacionesService.js` abre el socket de `NotificacionesBiblioTK` (`/NotificacionesBiblioTK/socket.io`, solo WebSocket) con la cookie de sesión: el servidor decide qué recibe la cuenta, el front no conoce el rol. `VITE_NOTIFICACIONES_URL` (por defecto `http://localhost:3006`; vacía = mismo origen, detrás del gateway).
+- `src/app/hooks/useNotificaciones.js` guarda el historial (20, el que manda el servidor al conectar), los avisos emergentes (máximo 3) y las no leídas (marca "leídas hasta" en `localStorage`, por navegador). Se conecta cuando la sesión ya se validó; si el servidor corta el socket (sesión cerrada en otra pestaña, cuenta borrada), revalida la sesión y vuelve a la landing.
+- `App.jsx` pinta `NotificationCenter`: botón flotante abajo a la derecha con contador, panel con el historial y avisos arriba a la derecha.
+- ⚠️ `src/app/components/NotificationCenter.jsx` y su `.css` son una **copia** de `bibliotk-ui` 0.4.0, que todavía no está publicada. Al publicarla: `npm install bibliotk-ui@^0.4.0`, importar `NotificationCenter` desde `"bibliotk-ui"` en `App.jsx`, borrar la copia y quitar su `@import` de `globals.css`.
 
 ## Pendientes conocidos
 
