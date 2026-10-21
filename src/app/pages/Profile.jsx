@@ -351,12 +351,10 @@ function Profile({ onAccountDeleted }) {
 								name="cc"
 								label="Cédula de identidad"
 								type="text"
-								inputMode="numeric"
-								autoComplete="off"
-								required
+								readOnly
+								hint="No se puede cambiar. Si tiene un error, acércate a la biblioteca."
+								inputClassName="cursor-default bg-sand-100 text-ink-soft"
 								value={formData.cc}
-								onChange={handleChange}
-								error={errorFor("cc")}
 							/>
 							<TextField
 								id="celular"
@@ -408,8 +406,8 @@ function Profile({ onAccountDeleted }) {
 						</h2>
 						<p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-soft">
 							Borra tu cuenta y tus datos personales de BiblioTK de forma
-							permanente. Si tienes préstamos sin devolver, primero debes
-							devolverlos.
+							permanente. Si tienes préstamos sin devolver o solicitudes en
+							curso, primero devuélvelos o cancélalas.
 						</p>
 						<Button
 							variant="danger"

@@ -1,5 +1,6 @@
 import { ArrowsClockwise } from "@phosphor-icons/react/ArrowsClockwise";
 import { ArrowsLeftRight } from "@phosphor-icons/react/ArrowsLeftRight";
+import { HourglassMedium } from "@phosphor-icons/react/HourglassMedium";
 import { MapPin } from "@phosphor-icons/react/MapPin";
 import { XCircle } from "@phosphor-icons/react/XCircle";
 import {
@@ -23,7 +24,11 @@ const cardClasses =
 	"rounded-[28px] bg-sand-50 shadow-[inset_0_0_0_1px_var(--color-sand-200)]";
 
 const estados = {
-	ACTIVO: { etiqueta: "Activo", clase: "bg-pine-100 text-pine-800" },
+	SOLICITADO: {
+		etiqueta: "Esperando aprobación",
+		clase: "bg-honey-100 text-honey-700 shadow-[inset_0_0_0_1px_rgb(168_112_44/0.2)]",
+	},
+	ACTIVO: { etiqueta: "Aprobado", clase: "bg-pine-100 text-pine-800" },
 	VENCIDO: {
 		etiqueta: "Vencido",
 		clase: "bg-clay-50 text-clay-700 shadow-[inset_0_0_0_1px_rgb(163_64_47/0.18)]",
@@ -31,11 +36,26 @@ const estados = {
 	DEVUELTO: { etiqueta: "Devuelto", clase: "bg-sand-200 text-ink-soft" },
 	CANCELADO: {
 		etiqueta: "Cancelado",
-		clase: "bg-honey-100 text-honey-700 shadow-[inset_0_0_0_1px_rgb(168_112_44/0.2)]",
+		clase: "bg-sand-200 text-ink-soft shadow-[inset_0_0_0_1px_var(--color-sand-300)]",
 	},
+	RECHAZADO: { etiqueta: "Rechazado", clase: "bg-clay-50 text-clay-700" },
 };
 
-const cerrados = ["DEVUELTO", "CANCELADO"];
+const cerrados = ["DEVUELTO", "CANCELADO", "RECHAZADO"];
+// Solo se recoge (y se devuelve) lo que el bibliotecario ya aprobó
+const aprobados = ["ACTIVO", "VENCIDO"];
+
+// Nunca se aprobó (sigue esperando, se rechazó o se canceló antes de aprobarse): su fecha es
+// la de la solicitud, no la de un préstamo
+function fueSolicitud(prestamo) {
+	return (
+		prestamo.estado === "SOLICITADO" ||
+		prestamo.estado === "RECHAZADO" ||
+		(prestamo.estado === "CANCELADO" &&
+			Boolean(prestamo.fechaSolicitud) &&
+			!prestamo.fechaRespuesta)
+	);
+}
 
 function Dato({ etiqueta, valor, destacado }) {
 	return (
@@ -54,6 +74,7 @@ function Dato({ etiqueta, valor, destacado }) {
 }
 
 function CancelarDialog({ prestamo, recogida, onClose, onCancelado }) {
+	const solicitud = prestamo.estado === "SOLICITADO";
 	const [error, setError] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,21 +97,27 @@ function CancelarDialog({ prestamo, recogida, onClose, onCancelado }) {
 			dismissible={!isSubmitting}
 			tone="danger"
 			icon={<XCircle aria-hidden="true" className="size-6" />}
-			title="¿Cancelar este préstamo?"
+			title={solicitud ? "¿Cancelar esta solicitud?" : "¿Cancelar este préstamo?"}
 			description={`«${prestamo.materialTitulo}» vuelve a quedar disponible para otros lectores.`}
 		>
 			<div className="grid gap-5">
-				<p className="text-sm leading-relaxed text-ink-soft">
-					Cancela solo si todavía no recogiste el libro. Si ya lo tienes,
-					devuélvelo en {recogida}.
-				</p>
+				{!solicitud && (
+					<p className="text-sm leading-relaxed text-ink-soft">
+						Cancela solo si todavía no recogiste el libro. Si ya lo tienes,
+						devuélvelo en {recogida}.
+					</p>
+				)}
 				{error && <Alert tone="error">{error}</Alert>}
 				<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 					<Button variant="outline" onClick={onClose} disabled={isSubmitting}>
 						Volver
 					</Button>
 					<Button variant="danger" loading={isSubmitting} onClick={handleConfirm}>
-						{isSubmitting ? "Cancelando..." : "Cancelar préstamo"}
+						{isSubmitting
+							? "Cancelando..."
+							: solicitud
+								? "Cancelar solicitud"
+								: "Cancelar préstamo"}
 					</Button>
 				</div>
 			</div>
@@ -118,6 +145,12 @@ function DatosCierre({ prestamo }) {
 		);
 	}
 
+	if (prestamo.estado === "RECHAZADO") {
+		return <Dato etiqueta="Rechazada el" valor={formatDate(prestamo.fechaRespuesta)} />;
+	}
+
+	if (prestamo.estado === "SOLICITADO") return null;
+
 	return (
 		<Dato
 			etiqueta="Devolver antes del"
@@ -127,8 +160,10 @@ function DatosCierre({ prestamo }) {
 	);
 }
 
-function PrestamoItem({ prestamo, material, delay, onCancelar }) {
+function PrestamoItem({ prestamo, material, recogida, delay, onCancelar }) {
 	const estado = estados[prestamo.estado] ?? estados.ACTIVO;
+	const sinAprobar = fueSolicitud(prestamo);
+	const cancelable = prestamo.estado === "SOLICITADO" || prestamo.estado === "ACTIVO";
 
 	return (
 		<li
@@ -160,9 +195,30 @@ function PrestamoItem({ prestamo, material, delay, onCancelar }) {
 					</span>
 				</div>
 				<dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap">
-					<Dato etiqueta="Prestado el" valor={formatDate(prestamo.fechaPrestamo)} />
+					<Dato
+						etiqueta={sinAprobar ? "Solicitado el" : "Prestado el"}
+						valor={formatDate(prestamo.fechaPrestamo)}
+					/>
 					<DatosCierre prestamo={prestamo} />
 				</dl>
+				{prestamo.estado === "SOLICITADO" && (
+					<p className="mt-3 flex items-start gap-1.5 text-[13px] font-medium text-honey-700">
+						<HourglassMedium aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+						Un bibliotecario debe aprobar tu solicitud. No vayas por el libro todavía:
+						te avisamos cuando puedas recogerlo.
+					</p>
+				)}
+				{prestamo.estado === "ACTIVO" && (
+					<p className="mt-3 flex items-start gap-1.5 text-[13px] font-medium text-pine-800">
+						<MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+						Ya puedes recogerlo en {recogida}.
+					</p>
+				)}
+				{prestamo.estado === "RECHAZADO" && prestamo.observaciones && (
+					<p className="mt-3 text-[13px] text-ink-soft">
+						Motivo: {prestamo.observaciones}
+					</p>
+				)}
 				{prestamo.estado === "VENCIDO" && (
 					<p className="mt-3 text-[13px] font-medium text-clay-700">
 						Este préstamo está vencido: devuélvelo cuanto antes para poder pedir
@@ -174,16 +230,16 @@ function PrestamoItem({ prestamo, material, delay, onCancelar }) {
 						Motivo: {prestamo.observaciones}
 					</p>
 				)}
-				{prestamo.estado === "ACTIVO" && prestamo.prestamoId && (
+				{cancelable && prestamo.prestamoId && (
 					<Button
 						variant="outline"
 						size="sm"
 						className="mt-4"
-						aria-label={`Cancelar el préstamo de «${prestamo.materialTitulo}»`}
+						aria-label={`Cancelar ${prestamo.estado === "SOLICITADO" ? "la solicitud" : "el préstamo"} de «${prestamo.materialTitulo}»`}
 						onClick={() => onCancelar(prestamo)}
 					>
 						<XCircle aria-hidden="true" className="size-4" />
-						Cancelar préstamo
+						{prestamo.estado === "SOLICITADO" ? "Cancelar solicitud" : "Cancelar préstamo"}
 					</Button>
 				)}
 			</div>
@@ -191,7 +247,7 @@ function PrestamoItem({ prestamo, material, delay, onCancelar }) {
 	);
 }
 
-function Seccion({ titulo, prestamos, portadas, delayInicial, onCancelar }) {
+function Seccion({ titulo, prestamos, portadas, recogida, delayInicial, onCancelar }) {
 	return (
 		<section aria-label={titulo} className="mt-10">
 			<h2 className="font-display text-2xl font-extrabold tracking-[-0.035em] text-pine-950">
@@ -203,6 +259,7 @@ function Seccion({ titulo, prestamos, portadas, delayInicial, onCancelar }) {
 						key={prestamo.id}
 						prestamo={prestamo}
 						material={portadas.get(prestamo.materialId)}
+						recogida={recogida}
 						delay={delayInicial + Math.min(index, 8) * 40}
 						onCancelar={onCancelar}
 					/>
@@ -239,6 +296,17 @@ function Prestamos() {
 		cargar();
 	}, [cargar]);
 
+	// Cuando el bibliotecario aprueba o rechaza una solicitud, el aviso llega por la campana:
+	// la lista se recarga sola
+	useEffect(() => {
+		function alNotificar(event) {
+			if (event.detail?.categoria === "prestamos") cargar();
+		}
+
+		window.addEventListener("bibliotk:notificacion", alNotificar);
+		return () => window.removeEventListener("bibliotk:notificacion", alNotificar);
+	}, [cargar]);
+
 	function reintentar() {
 		setStatus("loading");
 		setError("");
@@ -246,8 +314,11 @@ function Prestamos() {
 	}
 
 	function handleCancelado(actualizado) {
+		const eraSolicitud = aCancelar?.estado === "SOLICITADO";
 		setACancelar(null);
-		setAviso(`Cancelaste el préstamo de «${actualizado.materialTitulo}».`);
+		setAviso(
+			`Cancelaste ${eraSolicitud ? "la solicitud" : "el préstamo"} de «${actualizado.materialTitulo}».`,
+		);
 		setDatos((actuales) => ({
 			...actuales,
 			prestamos: actuales.prestamos.map((prestamo) =>
@@ -262,6 +333,7 @@ function Prestamos() {
 	const historial = datos.prestamos.filter((prestamo) =>
 		cerrados.includes(prestamo.estado),
 	);
+	const hayAprobados = enCurso.some((prestamo) => aprobados.includes(prestamo.estado));
 
 	return (
 		<>
@@ -271,7 +343,7 @@ function Prestamos() {
 						Mis préstamos
 					</h1>
 					<p className="mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
-						Consulta tus préstamos activos y su historial.
+						Sigue tus solicitudes, tus préstamos aprobados y su historial.
 					</p>
 				</div>
 				<Link to="/catalogo" className={buttonClasses({ variant: "outline" })}>
@@ -339,7 +411,9 @@ function Prestamos() {
 						>
 							<MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0 md:mt-0" />
 							<p className="text-[15px] font-semibold leading-snug">
-								Recoge tus libros físicos en {datos.recogida}.
+								{hayAprobados
+									? `Recoge tus libros aprobados en ${datos.recogida}.`
+									: "Cuando un bibliotecario apruebe tu solicitud, podrás recoger el libro."}
 								{datos.maximo > 0 && (
 									<span className="block text-[13px] font-medium md:inline md:before:content-['_·_']">
 										Puedes tener hasta {datos.maximo} préstamos a la vez.
@@ -353,6 +427,7 @@ function Prestamos() {
 							titulo="En curso"
 							prestamos={enCurso}
 							portadas={portadas}
+							recogida={datos.recogida}
 							delayInicial={100}
 							onCancelar={setACancelar}
 						/>
@@ -362,6 +437,7 @@ function Prestamos() {
 							titulo="Historial"
 							prestamos={historial}
 							portadas={portadas}
+							recogida={datos.recogida}
 							delayInicial={160}
 							onCancelar={setACancelar}
 						/>

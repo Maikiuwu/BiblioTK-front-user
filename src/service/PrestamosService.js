@@ -32,6 +32,7 @@ async function requestPrestamos(path, options, fallbackMessage) {
 	return data;
 }
 
+// Deja la solicitud (estado SOLICITADO): el libro se recoge cuando un bibliotecario la apruebe.
 // Devuelve { prestamo, recogida }: recogida es el lugar donde se retira el libro físico
 export async function createPrestamo(materialId) {
 	return requestPrestamos(
@@ -41,7 +42,7 @@ export async function createPrestamo(materialId) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ materialId }),
 		},
-		"No se pudo registrar el préstamo.",
+		"No se pudo enviar la solicitud.",
 	);
 }
 
@@ -54,7 +55,7 @@ export async function listMisPrestamos() {
 	);
 }
 
-// Solo préstamos ACTIVO del propio lector; devuelve el préstamo ya cancelado
+// Solo solicitudes (SOLICITADO) y préstamos ACTIVO del propio lector; devuelve el préstamo cancelado
 export async function cancelMiPrestamo(prestamoId) {
 	const data = await requestPrestamos(
 		`/Prestamos/mios/${prestamoId}/cancelacion`,

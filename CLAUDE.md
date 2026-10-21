@@ -36,12 +36,12 @@ Variables opcionales (`.env.local`): `VITE_PORT`, `VITE_NOTIFICACIONES_URL`, `VI
 
 ## Préstamos
 
-- **Catálogo:** al confirmar "Pedir préstamo" se llama a `POST /Prestamos`; el diálogo pasa a "¡Préstamo registrado!" con el mensaje **"Recoge el libro físico en el Poli, baños P40, sexto piso."** (el lugar lo manda el backend en `recogida`) y la fecha límite. Si el backend rechaza (vencidos, máximo de 3, ya prestado) el mensaje sale en el mismo diálogo.
-- **Mis préstamos:** lee `GET /Prestamos/mios`; las portadas salen del catálogo (`listMateriales`) por `materialId`.
+- **Catálogo:** "Pedir préstamo" → "Enviar solicitud" llama a `POST /Prestamos`, que solo deja la **solicitud** (`SOLICITADO`, el material queda apartado). El diálogo pasa a "¡Solicitud enviada!": hay que esperar a que un bibliotecario la apruebe antes de ir por el libro; el aviso de la campana dice cuándo recogerlo en **el Poli, baños P40, sexto piso** (el lugar lo manda el backend en `recogida`). Si el backend rechaza (vencidos, máximo de 3, ya apartado) el mensaje sale en el mismo diálogo.
+- **Mis préstamos:** lee `GET /Prestamos/mios`; las portadas salen del catálogo (`listMateriales`) por `materialId`. Estados: "Esperando aprobación" (se puede cancelar la solicitud), "Aprobado" (con el lugar de recogida y la fecha de devolución), "Vencido", y en el historial "Devuelto", "Cancelado" y "Rechazado" (con el motivo). La lista se recarga sola cuando llega una notificación de préstamos (evento `bibliotk:notificacion`).
 
 ## Perfil
 
-El inicio tiene **un solo botón, "Editar perfil"**; dentro de `/perfil` están las dos opciones: el formulario "Editar mis datos" y la sección "Eliminar mi cuenta" (pide la contraseña; el backend bloquea si hay préstamos sin devolver).
+El inicio tiene **un solo botón, "Editar perfil"**; dentro de `/perfil` están las dos opciones: el formulario "Editar mis datos" y la sección "Eliminar mi cuenta" (pide la contraseña; el backend bloquea si hay préstamos sin devolver o solicitudes en curso). La cédula se muestra de solo lectura: no se puede cambiar (no viaja en el DTO ni está en el esquema Zod).
 
 ## Portadas (`CoverImage` de `bibliotk-ui`)
 

@@ -1,8 +1,7 @@
 import { ArrowsClockwise } from "@phosphor-icons/react/ArrowsClockwise";
 import { Books } from "@phosphor-icons/react/Books";
-import { CalendarCheck } from "@phosphor-icons/react/CalendarCheck";
 import { CheckCircle } from "@phosphor-icons/react/CheckCircle";
-import { MapPin } from "@phosphor-icons/react/MapPin";
+import { HourglassMedium } from "@phosphor-icons/react/HourglassMedium";
 import {
 	Alert,
 	Button,
@@ -11,7 +10,6 @@ import {
 	cn,
 	CoverImage,
 	Dialog,
-	formatDate,
 	TextField,
 } from "bibliotk-ui";
 import { useCallback, useEffect, useState } from "react";
@@ -98,25 +96,18 @@ function LoanDialog({ material, onClose, onPrestado, onNoDisponible }) {
 				open
 				onClose={onClose}
 				icon={<CheckCircle aria-hidden="true" className="size-6" />}
-				title="¡Préstamo registrado!"
-				description={`«${material.titulo}» quedó apartado a tu nombre.`}
+				title="¡Solicitud enviada!"
+				description={`«${material.titulo}» quedó apartado a tu nombre mientras un bibliotecario revisa tu solicitud.`}
 			>
 				<div className="grid gap-5">
 					<div className="flex items-start gap-3 rounded-2xl bg-honey-100 p-4 text-honey-700 shadow-[inset_0_0_0_1px_rgb(168_112_44/0.2)]">
-						<MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+						<HourglassMedium aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
 						<p className="text-[15px] font-semibold leading-snug">
-							Recoge el libro físico en {resultado.recogida}.
+							Espera la aprobación antes de ir por el libro. Te avisamos en la
+							campana cuando puedas recogerlo en {resultado.recogida}.
 						</p>
 					</div>
-					<MaterialResumen material={material}>
-						{resultado.prestamo?.fechaDevolucionEsperada && (
-							<p className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-pine-800">
-								<CalendarCheck aria-hidden="true" className="size-4 shrink-0" />
-								Devuélvelo antes del{" "}
-								{formatDate(resultado.prestamo.fechaDevolucionEsperada)}
-							</p>
-						)}
-					</MaterialResumen>
+					<MaterialResumen material={material} />
 					<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 						<Button variant="outline" onClick={onClose}>
 							Seguir explorando
@@ -136,7 +127,7 @@ function LoanDialog({ material, onClose, onPrestado, onNoDisponible }) {
 			onClose={onClose}
 			dismissible={!enviando}
 			title="¿Pedir este préstamo?"
-			description="Al confirmar, el material queda apartado a tu nombre y te decimos dónde recogerlo."
+			description="Al confirmar, el material queda apartado a tu nombre y un bibliotecario revisa tu solicitud. Cuando la apruebe, te avisamos para que lo recojas."
 		>
 			<div className="grid gap-5">
 				<MaterialResumen material={material} />
@@ -146,7 +137,7 @@ function LoanDialog({ material, onClose, onPrestado, onNoDisponible }) {
 						Cancelar
 					</Button>
 					<Button loading={enviando} onClick={handleConfirm}>
-						{enviando ? "Registrando..." : "Confirmar préstamo"}
+						{enviando ? "Enviando..." : "Enviar solicitud"}
 					</Button>
 				</div>
 			</div>

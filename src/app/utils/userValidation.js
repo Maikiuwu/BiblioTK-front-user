@@ -13,7 +13,6 @@ const fieldLimits = {
 	nombres: 50,
 	apellidos: 50,
 	email: 100,
-	cc: 15,
 	celular: 15,
 	nombreUsuario: 30,
 };
@@ -28,18 +27,11 @@ const nameSchema = (label) =>
 		);
 
 // Reglas de los datos del perfil (las mismas del registro en BiblioTK-front, sin la contraseña:
-// este formulario no la tiene y, si el esquema la exige, "Guardar cambios" nunca pasa la validación)
+// este formulario no la tiene y, si el esquema la exige, "Guardar cambios" nunca pasa la validación).
+// Tampoco la cédula: se muestra, pero no se puede cambiar
 const userDataSchema = z.object({
 	nombres: nameSchema("Los nombres").max(fieldLimits.nombres),
 	apellidos: nameSchema("Los apellidos").max(fieldLimits.apellidos),
-	cc: z
-		.string()
-		.trim()
-		.regex(/^[1-9]\d*$/, "La cédula debe ser un número entero mayor que 0.")
-		.max(
-			fieldLimits.cc,
-			`La cédula debe tener hasta ${fieldLimits.cc} dígitos.`,
-		),
 	email: z
 		.email("Ingresa un correo válido, por ejemplo: tu@correo.com.")
 		.trim()
